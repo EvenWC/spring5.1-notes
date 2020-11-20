@@ -35,6 +35,9 @@ import org.springframework.beans.factory.support.BeanDefinitionRegistryPostProce
 import org.springframework.beans.factory.support.DefaultListableBeanFactory;
 import org.springframework.beans.factory.support.MergedBeanDefinitionPostProcessor;
 import org.springframework.beans.factory.support.RootBeanDefinition;
+import org.springframework.context.annotation.AnnotatedBeanDefinitionReader;
+import org.springframework.context.annotation.AnnotationConfigApplicationContext;
+import org.springframework.context.annotation.AnnotationConfigUtils;
 import org.springframework.core.OrderComparator;
 import org.springframework.core.Ordered;
 import org.springframework.core.PriorityOrdered;
@@ -51,7 +54,23 @@ final class PostProcessorRegistrationDelegate {
 	private PostProcessorRegistrationDelegate() {
 	}
 
-
+	/**
+	 *  执行 beanFactoryPostProcessors, 判断beanFactory是否是一个bean定义注册 {@link BeanDefinitionRegistry};
+	 *  1. 如果是，那么要先按顺序执行实现了{@link PriorityOrdered} 接口的 bean注册后置处理器 {@link BeanDefinitionRegistryPostProcessor#postProcessBeanDefinitionRegistry} ,
+	 *    1.1 这里有一个很重要的内置实现类 {@link org.springframework.context.annotation.ConfigurationClassPostProcessor}，在这个类中会去解析配置类，
+	 *  	  处理包括 {@link org.springframework.context.annotation.ComponentScan},{@link org.springframework.context.annotation.Import} 等注解，然后将解析出来的类封装成一个个的 {@link BeanDefinition}；
+	 *  	  然后调用 {@link BeanDefinitionRegistry#registerBeanDefinition(String, BeanDefinition)} 进行注册，实际上是存入到了{@link DefaultListableBeanFactory#beanDefinitionMap} 中；
+	 *    1.2 处理完成 PriorityOrdered的实现以后，再按顺序执行实现了 {@link Ordered}的BeanDefinitionRegistry 的实现类；
+	 *
+	 *  2. 如果传入的不是一个 BeanDefinitionRegistry ,那么执行传入的 beanFactoryPostProcessors。
+	 *
+	 *  3. 最后按顺序{@link PriorityOrdered}，{@link Ordered} 执行容器内部的已经注册好了的 {@link BeanFactoryPostProcessor#postProcessBeanFactory}，
+	 *     内置beanFactory后置处理器 {@link org.springframework.context.annotation.ConfigurationClassPostProcessor}也实现了该接口 ，
+	 *     在这个内置的实现中会对配置类{@link org.springframework.context.annotation.Configuration} 进行动态代理（CGLIB）{@link org.springframework.context.annotation.ConfigurationClassPostProcessor#enhanceConfigurationClasses}
+	 *
+	 * @param beanFactory
+	 * @param beanFactoryPostProcessors
+	 */
 	public static void invokeBeanFactoryPostProcessors(
 			ConfigurableListableBeanFactory beanFactory, List<BeanFactoryPostProcessor> beanFactoryPostProcessors) {
 

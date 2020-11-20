@@ -822,8 +822,11 @@ public class DefaultListableBeanFactory extends AbstractAutowireCapableBeanFacto
 
 		// Trigger initialization of all non-lazy singleton beans...
 		for (String beanName : beanNames) {
+			// 合并BeanDefinition,为什么要合并?主要是由于存在beanDefinition 有继承的机制，因此需要将父beanDefinition 和子 beanDefinition 进行合并
 			RootBeanDefinition bd = getMergedLocalBeanDefinition(beanName);
+			// 只实例化非抽象的,单例的,非懒加载的实例bean
 			if (!bd.isAbstract() && bd.isSingleton() && !bd.isLazyInit()) {
+				// 是否是一个factoryBean
 				if (isFactoryBean(beanName)) {
 					Object bean = getBean(FACTORY_BEAN_PREFIX + beanName);
 					if (bean instanceof FactoryBean) {
@@ -844,6 +847,7 @@ public class DefaultListableBeanFactory extends AbstractAutowireCapableBeanFacto
 					}
 				}
 				else {
+					//普通的单例bean
 					getBean(beanName);
 				}
 			}
